@@ -126,6 +126,37 @@
                 46: 'delete'
             },
             keyState = {},
+            timezones = [
+                {
+                    key: 'America/New_York',
+                    display: 'EST (UTC ' + parseInt(moment().tz('America/New_York').format('Z')) + ' )'
+                },
+                {
+                    key: 'America/Chicago',
+                    display: 'CST (UTC ' + parseInt(moment().tz('America/Chicago').format('Z')) + ' )'
+                },
+                {
+                    key: 'America/Denver',
+                    display: 'MST (UTC ' + parseInt(moment().tz('America/Denver').format('Z')) + ' )'
+                },
+                {
+                    key: 'America/Phoenix',
+                    display: 'Arizona (UTC ' + parseInt(moment().tz('America/Phoenix').format('Z')) + ' )'
+                },
+                {
+                    key: 'America/Los_Angeles',
+                    display: 'PST (UTC ' + parseInt(moment().tz('America/Los_Angeles').format('Z')) + ' )'
+                },
+                {
+                    key: 'America/Anchorage',
+                    display: 'AKST (UTC ' + parseInt(moment().tz('America/Anchorage').format('Z')) + ' )'
+                },
+                {
+                    key: 'Pacific/Honolulu',
+                    display: 'HST (UTC ' + parseInt(moment().tz('Pacific/Honolulu').format('Z')) + ' )'
+                },
+            ],
+            currentTimezoneIndex = 0,
 
             /********************************************************************************
              *
@@ -246,9 +277,15 @@
                 }
                 if (isEnabled('m')) {
                     if (isEnabled('h')) {
-                        topRow.append($('<td>').addClass('separator'));
-                        middleRow.append($('<td>').addClass('separator').html(':'));
-                        bottomRow.append($('<td>').addClass('separator'));
+                        if (options.showTimezones) {
+                            topRow.append($('<td>').addClass('separator').css("width", "5px"));
+                            middleRow.append($('<td>').addClass('separator').html(':').css("width", "5px"));
+                            bottomRow.append($('<td>').addClass('separator').css("width", "5px"));
+                        } else {
+                            topRow.append($('<td>').addClass('separator'));
+                            middleRow.append($('<td>').addClass('separator').html(':'));
+                            bottomRow.append($('<td>').addClass('separator'));
+                        }
                     }
                     topRow.append($('<td>')
                         .append($('<a>').attr({ href: '#', tabindex: '-1', 'title': options.tooltips.incrementMinute }).addClass('btn').attr('data-action', 'incrementMinutes')
@@ -261,9 +298,15 @@
                 }
                 if (isEnabled('s')) {
                     if (isEnabled('m')) {
-                        topRow.append($('<td>').addClass('separator'));
-                        middleRow.append($('<td>').addClass('separator').html(':'));
-                        bottomRow.append($('<td>').addClass('separator'));
+                        if (options.showTimezones) {
+                            topRow.append($('<td>').addClass('separator').css("width", "5px"));
+                            middleRow.append($('<td>').addClass('separator').html(':').css("width", "5px"));
+                            bottomRow.append($('<td>').addClass('separator').css("width", "5px"));
+                        } else {
+                            topRow.append($('<td>').addClass('separator'));
+                            middleRow.append($('<td>').addClass('separator').html(':'));
+                            bottomRow.append($('<td>').addClass('separator'));
+                        }
                     }
                     topRow.append($('<td>')
                         .append($('<a>').attr({ href: '#', tabindex: '-1', 'title': options.tooltips.incrementSecond }).addClass('btn').attr('data-action', 'incrementSeconds')
@@ -282,8 +325,17 @@
                     bottomRow.append($('<td>').addClass('separator'));
                 }
 
+                if (options.showTimezones) {
+                    topRow.append($('<td>')
+                        .append($('<span>').addClass(options.icons.up).css({"width": "50px", "height": "70px", "display": "block"}).attr({ href: '#', tabindex: '-1', 'title': options.tooltips.incrementTimezone }).addClass('btn').attr('data-action', 'incrementTimezone')));
+                    middleRow.append($('<td>')
+                        .append($('<button id="selectedTimezone">').addClass('btn btn-primary').attr({ 'data-action': 'pickTimezone', tabindex: '-1', 'title': options.tooltips.pickTimezone }).html(timezones[currentTimezoneIndex].display).css("width", "150px").css("text-align", "left")));
+                    bottomRow.append($('<td>')
+                        .append($('<span>').addClass(options.icons.down).css({"width": "50px", "height": "70px", "display": "block"}).attr({ href: '#', tabindex: '-1', 'title': options.tooltips.decrementTimezone }).addClass('btn').attr('data-action', 'decrementTimezone')));
+                }
+
                 return $('<div>').addClass('timepicker-picker')
-                    .append($('<table>').addClass('table-condensed')
+                        .append($('<table>').addClass('table-condensed')
                         .append([topRow, middleRow, bottomRow]));
             },
 
@@ -293,6 +345,8 @@
                     minutesView = $('<div>').addClass('timepicker-minutes')
                         .append($('<table>').addClass('table-condensed')),
                     secondsView = $('<div>').addClass('timepicker-seconds')
+                        .append($('<table>').addClass('table-condensed')),
+                    timezonesView = $('<div>').addClass('timepicker-timezones')
                         .append($('<table>').addClass('table-condensed')),
                     ret = [getTimePickerMainTemplate()];
 
@@ -304,6 +358,9 @@
                 }
                 if (isEnabled('s')) {
                     ret.push(secondsView);
+                }
+                if (options.showTimezones) {
+                    ret.push(timezonesView);
                 }
 
                 return ret;
@@ -347,6 +404,13 @@
 
                 if (options.sideBySide && hasDate() && hasTime()) {
                     template.addClass('timepicker-sbs');
+                    if (options.showTimezones) {
+                        template.css("width", "45em");
+                        dateView.css("width", "45%");
+                        dateView.css("padding-right", "0");
+                        timeView.css("width", "55%");
+                        timeView.css("padding-left", "0");
+                    }
                     if (options.toolbarPlacement === 'top') {
                         template.append(toolbar);
                     }
@@ -815,6 +879,25 @@
                 table.empty().append(html);
             },
 
+            fillTimezones = function () {
+                var table = widget.find('.timepicker-timezones table'),
+                    iterator = 0,
+                    html = [],
+                    row = $('<tr>');
+                while (iterator < timezones.length) {
+                    if (iterator % 2 === 0 ) {
+                        row = $('<tr>');
+                        html.push(row);
+                    }
+
+                    row.append($('<td data-action="selectTimezone" class="second">').text(timezones[iterator].display).data('key', timezones[iterator].key));
+                    iterator++;
+                }
+
+                table.empty().append(html);
+
+            },
+
             fillTime = function () {
                 var toggle, newDate, timeComponents = widget.find('.timepicker span[data-time-component]');
 
@@ -837,6 +920,7 @@
                 fillHours();
                 fillMinutes();
                 fillSeconds();
+                fillTimezones();
             },
 
             update = function () {
@@ -881,7 +965,7 @@
                 if (isValid(targetMoment)) {
                     date = targetMoment;
                     viewDate = date.clone();
-                    input.val(date.format(actualFormat));
+                    input.val(date.format(actualFormat) + (options.showTimezones ? " " + timezones[currentTimezoneIndex].display : "" ));
                     element.data('date', date.format(actualFormat));
                     unset = false;
                     update();
@@ -1072,6 +1156,20 @@
                     }
                 },
 
+                incrementTimezone: function () {
+                    currentTimezoneIndex++;
+                    if (timezones.length <= currentTimezoneIndex) {
+                        currentTimezoneIndex = 0;
+                    }
+                    options.selectedTimezone = timezones[currentTimezoneIndex].key;
+                    widget.find('#selectedTimezone').html(timezones[currentTimezoneIndex].display);
+                    input.val(date.format(actualFormat) + (options.showTimezones ? " " + timezones[currentTimezoneIndex].display : "" ));
+                    //trigger a dp.change event
+                    element.trigger({
+                        type: 'dp.change'
+                    });
+                },
+
                 decrementHours: function () {
                     var newDate = date.clone().subtract(1, 'h');
                     if (isValid(newDate, 'h')) {
@@ -1093,8 +1191,27 @@
                     }
                 },
 
+                decrementTimezone: function () {
+                    currentTimezoneIndex--;
+                    if (currentTimezoneIndex < 0) {
+                        currentTimezoneIndex = timezones.length -1;
+                    }
+                    options.selectedTimezone = timezones[currentTimezoneIndex].key;
+                    widget.find('#selectedTimezone').html(timezones[currentTimezoneIndex].display);
+                    input.val(date.format(actualFormat) + (options.showTimezones ? " " + timezones[currentTimezoneIndex].display : "" ));
+                    //trigger a dp.change event
+                    element.trigger({
+                        type: 'dp.change'
+                    });
+                },
+
                 togglePeriod: function () {
                     setValue(date.clone().add((date.hours() >= 12) ? -12 : 12, 'h'));
+                },
+
+                pickTimezone: function () {
+                    widget.find('.timepicker .timepicker-picker').hide();
+                    widget.find('.timepicker .timepicker-timezones').show();
                 },
 
                 togglePicker: function (e) {
@@ -1177,6 +1294,14 @@
                     actions.showPicker.call(picker);
                 },
 
+                selectTimezone: function (e) {
+                    currentTimezoneIndex = timezones.findIndex(x => x.key == $(e.target).data('key'));
+                    options.selectedTimezone = timezones[currentTimezoneIndex].key;
+                    widget.find('#selectedTimezone').html(timezones[currentTimezoneIndex].display);
+                    input.val(date.format(actualFormat) + (options.showTimezones ? " " + timezones[currentTimezoneIndex].display : "" ));
+                    actions.showPicker.call(picker);
+                },
+
                 clear: clear,
 
                 today: function () {
@@ -1240,6 +1365,7 @@
                 widget.find('.timepicker-hours').hide();
                 widget.find('.timepicker-minutes').hide();
                 widget.find('.timepicker-seconds').hide();
+                widget.find('.timepicker-timezones').hide();
 
                 update();
                 showMode();
@@ -1928,6 +2054,39 @@
             return picker;
         };
 
+        picker.showTimezones = function (showTimezones) {
+            if (arguments.length === 0) {
+                return options.showTimezones;
+            }
+
+            if (typeof showTimezones !== 'boolean') {
+                throw new TypeError('showTimezones() expects a boolean parameter');
+            }
+            options.showTimezones = showTimezones;
+            if (widget) {
+                hide();
+                show();
+            }
+            return picker;
+        };
+
+        picker.selectedTimezone = function (selectedTimezone) {
+            if (arguments.length === 0) {
+                return options.selectedTimezone;
+            }
+
+            if (typeof selectedTimezone !== 'string') {
+                throw new TypeError('selectedTimezone() expects a string parameter');
+            }
+            currentTimezoneIndex = timezones.findIndex(x => x.key == selectedTimezone);
+            options.selectedTimezone = timezones[currentTimezoneIndex].key;
+            if (widget) {
+                hide();
+                show();
+            }
+            return picker;
+        };
+
         picker.viewMode = function (viewMode) {
             if (arguments.length === 0) {
                 return options.viewMode;
@@ -2192,7 +2351,7 @@
             }
 
             if (typeof parseInputDate !== 'function') {
-                throw new TypeError('parseInputDate() sholud be as function');
+                throw new TypeError('parseInputDate() should be as function');
             }
 
             options.parseInputDate = parseInputDate;
@@ -2491,14 +2650,20 @@
             pickMinute: 'Pick Minute',
             incrementMinute: 'Increment Minute',
             decrementMinute: 'Decrement Minute',
+            incrementTimezone: 'Increment Timezone',
+            decrementTimezone: 'Decrement Timezone',
             pickSecond: 'Pick Second',
             incrementSecond: 'Increment Second',
             decrementSecond: 'Decrement Second',
             togglePeriod: 'Toggle Period',
-            selectTime: 'Select Time'
+            pickTimezone: 'Pick Timezone',
+            selectTime: 'Select Time',
+            selectTimezone: 'Select Timezone'
         },
         useStrict: false,
         sideBySide: false,
+        showTimezones: false,
+        selectedTimezone: 'UTC',
         daysOfWeekDisabled: false,
         calendarWeeks: false,
         viewMode: 'days',
