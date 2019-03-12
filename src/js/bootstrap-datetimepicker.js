@@ -2079,6 +2079,10 @@
                 throw new TypeError('selectedTimezone() expects a string parameter');
             }
             currentTimezoneIndex = timezones.findIndex(x => x.key == selectedTimezone);
+            if (currentTimezoneIndex == -1) {
+                // Entered Timezone was not found: default to Phoenix
+                currentTimezoneIndex = timezones.findIndex(x => x.key == 'America/Phoenix');
+            }
             options.selectedTimezone = timezones[currentTimezoneIndex].key;
             if (widget) {
                 hide();
